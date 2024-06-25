@@ -39,4 +39,4 @@ plot(lm_scaled)
 plot(lm_scaled$residuals)
 hist(lm_scaled$residuals)
 plot(datos$Salary,lm_scaled$fitted.values)
-shapiro.test(lm_scaled$residuals)
+
