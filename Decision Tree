@@ -1,0 +1,57 @@
+#Leer las librerias requeridas
+library(MASS)
+library(ISLR)
+library(ggplot2)
+library(caret)
+library(tidyr)
+library(psych)
+library(glmnet)
+library(dplyr)
+library(leaps)
+library(readxl)
+library(tree)
+library(ggpubr)
+datos<- read_excel("C:/Users/gonza/Downloads/Dataset Medical Insurance EII7446.xlsx")
+View(datos)
+meds = na.omit(datos) #remover missing values
+
+#Muestreo aleatorio 
+
+
+set.seed(17)
+train <- sample(1:nrow(meds), size = nrow(meds)*0.5)
+#Creación del árbol de decisión
+Mtree <- tree(formula = meds$charges ~ ., data = meds, subset = train, split = "deviance")
+summary(Mtree)
+plot(x = Mtree, type = "proportional")
+text(x = Mtree, splits = TRUE, pretty = 0, cex = 0.8, col = "firebrick4")
+
+#Cross-validation
+set.seed(17) 
+cv_tree <- cv.tree(Mtree, K = 10) 
+cv_tree
+plot(cv_tree)
+
+resultados_cv <- data.frame(n_nodos = cv_tree$size, deviance = cv_tree$dev, alpha = cv_tree$k)
+
+p1 <- ggplot(data = resultados_cv, aes(x = n_nodos, y = deviance)) +
+  geom_line() + geom_point() +
+  labs(title = "Error vs tamaño del arbol") + theme_bw()
+
+
+p2 <- ggplot(data = resultados_cv, aes(x = alpha, y = deviance)) +
+  geom_line() + geom_point() +
+  labs(title = "Error vs hiperparametro alpha") + theme_bw()
+ggarrange(p1, p2)
+
+
+#Utilizamos prune.tree para obtener el mejor arbol de 4 niveles de acuerdo al tamaño identificado anteriormente
+arbol_pruning <- prune.tree(tree = Mtree, best = 4)
+plot(x = arbol_pruning, type = "proportional")
+text(x = arbol_pruning, splits = TRUE, pretty = 0, cex = 0.8, col = "firebrick")
+#Evaluación del Modelo
+
+predicciones <- predict(arbol_pruning, newdata = meds[-train,]) 
+e<-(predicciones - meds[-train,"charges"])^{2}
+e
+summary(e)
