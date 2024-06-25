@@ -28,6 +28,7 @@ hist(meds$charges)
 BarChart(children, data=meds, by=region)
 PieChart(region, data=meds, fill="reds")
 
+#promedio
 meds |> 
   group_by(smoker) |> 
   summarize(across(everything(), mean))
@@ -39,7 +40,6 @@ meds |>
   summarize(across(everything(), mean))
 
 #mediana
-
 meds |> 
   group_by(smoker) |> 
   summarize(across(everything(), median))
