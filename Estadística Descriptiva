@@ -1,0 +1,73 @@
+#Leer las librerias requeridas
+library(MASS)
+library(ISLR)
+library(ggplot2)
+library(caret)
+library(tidyr)
+library(psych)
+library(glmnet)
+library(dplyr)
+library(leaps)
+library(readxl)
+datos<- read_excel("C:/Users/gonza/Downloads/Dataset Medical Insurance EII7446.xlsx")
+View(datos)
+meds = na.omit(datos) #remover missing values
+
+#Estadistica descriptiva#
+library(dplyr)
+count(meds,sex)#atributo tipo nominal
+count(meds,smoker)#atributo tipo nominal
+count(meds,region)#atributo tipo nominal
+count(meds,children)#atributo tipo ordinal
+summary(meds)
+
+#distribucion con graficos
+library(lessR)
+hist(meds$bmi)
+hist(meds$charges)
+BarChart(children, data=meds, by=region)
+PieChart(region, data=meds, fill="reds")
+###Agregacion####
+#Los datos a menudo contienen grupos y queremos comparar estos grupos. Agrupamos 
+#el conjunto de datos del iris por especies y luego calculamos una estadística 
+#resumen para cada grupo y asi compararlos.
+#promedio
+
+meds |> 
+  group_by(smoker) |> 
+  summarize(across(everything(), mean))
+meds |> 
+  group_by(region) |> 
+  summarize(across(everything(), mean))
+meds |> 
+  group_by(sex) |> 
+  summarize(across(everything(), mean))
+
+#mediana
+
+meds |> 
+  group_by(smoker) |> 
+  summarize(across(everything(), median))
+meds |> 
+  group_by(region) |> 
+  summarize(across(everything(), median))
+meds |> 
+  group_by(sex) |> 
+  summarize(across(everything(), median))
+
+
+
+
+#atributos numéricos o ratio
+#visualizar
+boxplot(data=meds, meds$charges)
+Plot(charges, data=meds, by=sex)
+#calcular tendencia central
+mean(meds$charges, na.rm = TRUE)
+median(meds$charges, na.rm = TRUE)
+#calcular dispersion
+sd(meds$charges, na.rm = TRUE)
+min(meds$charges, na.rm = TRUE)
+max(meds$charges, na.rm = TRUE)
+range(meds$charges, na.rm = TRUE)
+var(meds$charges, na.rm = TRUE)
