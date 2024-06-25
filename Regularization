@@ -1,1 +1,42 @@
+#Leer las librerias requeridas
+library(MASS)
+library(ISLR)
+library(ggplot2)
+library(caret)
+library(tidyr)
+library(psych)
+library(glmnet)
+library(dplyr)
+library(leaps)
+library(readxl)
+datos<- read_excel("C:/Users/gonza/Downloads/Dataset Medical Insurance EII7446.xlsx")
+View(datos)
+meds = na.omit(datos) #remover missing values
+#Usar funcion regsubsets del paquete leaps para generar modelos de seleccion de variables
+#BEST SUBSET
+best_models<-regsubsets(charges~., data = meds, nvmax= 8)
+summary(best_models)
+best_models$rss
+names(summary(best_models))
+model_bst<-summary(best_models)
+names(model_bst)
+plot(model_bst$adjr2)
+plot(model_bst$rsq,model_bst$adjr2)
+which.max(model_bst$adjr2)
+coef(object = best_models, id = 5)
 
+summary(best_models)$adjr2[5]
+summary(best_models)$adjr2[4]
+summary(best_models)$adjr2[3]
+summary(best_models)$adjr2[2]
+
+# Escalar variables
+lm_scaled   <-  lm(meds$charges~ meds$age + meds$bmi+ meds$children, data = meds    )
+summary(lm_scaled)
+anova(lm_scaled)
+plot(lm_scaled)
+
+plot(lm_scaled$residuals)
+hist(lm_scaled$residuals)
+plot(datos$Salary,lm_scaled$fitted.values)
+shapiro.test(lm_scaled$residuals)
