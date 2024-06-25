@@ -38,5 +38,5 @@ plot(lm_scaled)
 
 plot(lm_scaled$residuals)
 hist(lm_scaled$residuals)
-plot(datos$Salary,lm_scaled$fitted.values)
+plot(datos$charges,lm_scaled$fitted.values)
 
