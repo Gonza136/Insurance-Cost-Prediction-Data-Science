@@ -1,0 +1,185 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+1. Estadística Descriptiva:   
+El análisis previo al desarrollo del modelo comenzó por revisar la estadística descriptiva de la base de datos, empezando de manera primitiva por contar y hacer una especie de censo, con el fin de vislumbrar las características de la base de datos
+```{r}
+count(meds,smoker)#atributo tipo nominal
+
+```
+En primer lugar, es posible notar que un 79,65% de los encuestados no son fumadores, mientras que un 20,34%  no lo son
+
+```{r}
+count(meds,sex)#atributo tipo nominal
+```
+De aquí es posible ver que 1366 de las personas de la BD son mujeres, mientras que 1406 son hombres
+```{r}
+count(meds,region)#atributo tipo nominal
+
+```
+Por otro lado, podemos ver que la región de la que provienen las personas están distribuidas de manera prácticamente homogénea, con una mayoría de los encuestados provenientes de la sona sureste de los Estados Unidos.
+
+El análisis prosigue con el estudio mediante gráficos de las carácterísticas de los encuestados, comenzando con un histograma de los Índices de masa corporal, un histograma de los costos de seguro médico.
+```{r}
+hist(meds$bmi)
+hist(meds$charges)
+```
+
+Luego, se procedió a hacer agrupaciones que se estimaron convenientes y a calcular medidas de tendencia central para grupos de interés, partiendo por el cálculo de medias.
+```{r}
+meds |> 
+  group_by(smoker) |> 
+  summarize(across(everything(), mean))
+meds |> 
+  group_by(region) |> 
+  summarize(across(everything(), mean))
+meds |> 
+  group_by(sex) |> 
+  summarize(across(everything(), mean))
+```
+Se prosiguió a revisar la mediana de los grupos anteriormente estudiados
+
+```{r}
+#mediana
+meds |> 
+  group_by(smoker) |> 
+  summarize(across(everything(), median))
+meds |> 
+  group_by(region) |> 
+  summarize(across(everything(), median))
+meds |> 
+  group_by(sex) |> 
+  summarize(across(everything(), median))
+
+```
+
+Se intenta realizar un estudio desde la perspectiva de género, separando la distribución de los cargos del seguro médico segun sexo, sin embargo, no entrega mayor información.
+```{r}
+#atributos numéricos o ratio
+#visualizar
+boxplot(data=meds, meds$charges)
+Plot(charges, data=meds, by=sex)
+```
+Cerrando con la estadística descriptiva, se calculan las medidas de tendencia central para la variable de interés de este estudio, el cual es el costo del seguro médico, empezando por la media y la mediana.
+```{r}
+#calcular tendencia central
+mean(meds$charges, na.rm = TRUE)
+median(meds$charges, na.rm = TRUE)
+```
+Finalmente, se calculan medidas de dispersión para la variable de interés.
+Donde se tiene en primer lugar la Desviación estándar
+```{r}
+#calcular dispersion
+sd(meds$charges, na.rm = TRUE)
+```
+Mínimo
+
+```{r}
+min(meds$charges, na.rm = TRUE)
+```
+Máximo
+
+```{r}
+max(meds$charges, na.rm = TRUE)
+```
+Rango
+
+```{r}
+range(meds$charges, na.rm = TRUE)
+```
+y Varianza
+```{r}
+var(meds$charges, na.rm = TRUE)
+```
+
+2. Método de Selección de Variables:    
+En esta sección se procedió a utilizar un método de selección de variables (regularization), que permitirá trabajar con un subset de predictores relevantes, a diferencia de trabajar con todos ellos, de manera de evitar el sobre ajuste del modelo, generando un modelo con menor complejidad y flexibilidad (parsimonia)
+```{r}
+#Usar funcion regsubsets del paquete leaps para generar modelos de seleccion de variables
+#BEST SUBSET
+best_models<-regsubsets(charges~., data = meds, nvmax= 8)
+summary(best_models)
+best_models$rss
+names(summary(best_models))
+model_bst<-summary(best_models)
+names(model_bst)
+plot(model_bst$adjr2)
+plot(model_bst$rsq,model_bst$adjr2)
+which.max(model_bst$adjr2)
+coef(object = best_models, id = 5)
+
+```
+  De los gráficos es posible notar que un modelo con 3 variables es el ideal, pues ofrece el incremento de Rcuadrado, sin agregar mucha complejidad al modelo. Estas 3 variables serían si la persona es o no fumadora, su edad, y su índice de masa corporal.
+  
+  Luego, se buscó escalar las variables y evaluar tentativamente un modelo de regresión lineal de 3 variables, sin embargo, el análisis de residuos arrojó que probablemente este tipo de modelo no sea el adecuado para evaluar este set de datos, de forma que se decidió optar por un modelo de árbol de decisión.
+```{r}
+# Escalar variables
+lm_scaled   <-  lm(meds$charges~ meds$age + meds$bmi+ meds$children, data = meds    )
+summary(lm_scaled)
+anova(lm_scaled)
+plot(lm_scaled)
+
+plot(lm_scaled$residuals)
+hist(lm_scaled$residuals)
+plot(datos$charges,lm_scaled$fitted.values)
+
+```
+3. Modelo Predictor:    
+Para esta sección, se utilizó primeramente un muestro aleatorio para determinar los conjuntos de entrenamiento y testeo, seteando así una semilla que permite la reproductibilidad de los resultados
+```{r}
+#Muestreo aleatorio 
+
+library(tree)
+set.seed(17)
+train <- sample(1:nrow(meds), size = nrow(meds)*0.5)
+```
+
+Una vez creado el conjunto de entrenamiento, se procede a crear el árbol de decisión primigenio utilizando la funcion Mtree
+```{r}
+#Creación del árbol de decisión
+Mtree <- tree(formula = meds$charges ~ ., data = meds, subset = train, split = "deviance")
+summary(Mtree)
+plot(x = Mtree, type = "proportional")
+text(x = Mtree, splits = TRUE, pretty = 0, cex = 0.8, col = "firebrick4")
+
+```
+Luego, se utiliza cv_tree para realizar la validación cruzada del modelo de entrenamiento, utilizando un tamaño de árbol máximo de 10
+```{r}
+#Cross-validation
+set.seed(17) 
+cv_tree <- cv.tree(Mtree, K = 10) 
+cv_tree
+plot(cv_tree)
+```
+Luego, se procede a diseñar un dataframe con los resultados de la validación cruzada, para luego evaluar estos resultados según la cantidad de nodos y el hiperparámetro alfa de penalización del árbol, para encontrar el tamaño óptimo del árbol
+```{r}
+resultados_cv <- data.frame(n_nodos = cv_tree$size, deviance = cv_tree$dev, alpha = cv_tree$k)
+
+p1 <- ggplot(data = resultados_cv, aes(x = n_nodos, y = deviance)) +
+  geom_line() + geom_point() +
+  labs(title = "Error vs tamaño del arbol") + theme_bw()
+
+
+p2 <- ggplot(data = resultados_cv, aes(x = alpha, y = deviance)) +
+  geom_line() + geom_point() +
+  labs(title = "Error vs hiperparametro alpha") + theme_bw()
+ggarrange(p1, p2)
+```
+Luego, utilizamos prune.tree para obtener el mejor arbol de 4 niveles de acuerdo al tamaño identificado anteriormente
+```{r}
+arbol_pruning <- prune.tree(tree = Mtree, best = 4)
+plot(x = arbol_pruning, type = "proportional")
+text(x = arbol_pruning, splits = TRUE, pretty = 0, cex = 0.8, col = "firebrick")
+```
+
+Finalmente, se genera un dataframe que contenga las predicciones del módelo de árbol de decisión definitivo,para luego calcular el "Mean Square Error" como medida con la cual evaluamos el modelo.
+
+```{r}
+#Evaluación del Modelo
+predicciones <- predict(arbol_pruning, newdata = meds[-train,]) 
+e<-(predicciones - meds[-train,"charges"])^{2}
+e
+summary(e)
+```
